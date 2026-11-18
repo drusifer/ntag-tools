@@ -14,3 +14,7 @@ test_tag_keys_backup*.csv
 data/
 test_tag_keys_backups/
 tui_*.log
+
+# Bob Protocol / via — machine-local config and index, not portable
+.mcp.json
+.via/
