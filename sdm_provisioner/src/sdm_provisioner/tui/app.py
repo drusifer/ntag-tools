@@ -8,9 +8,7 @@ from typing import ClassVar
 from textual.app import App
 from textual.binding import BindingType
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager
-from sdm_provisioner.service_key_manager import ServiceKeyManager
-from sdm_provisioner.tui.screens.coin_naming import CoinNamingScreen
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.tui.screens.configure_keys import ConfigureKeysScreen
 from sdm_provisioner.tui.screens.format_picc import FormatPICCScreen
 from sdm_provisioner.tui.screens.key_recovery import KeyRecoveryScreen
@@ -22,7 +20,7 @@ from sdm_provisioner.tui.screens.setup_url import SetupUrlScreen
 class NtagProvisionerApp(App):
     """A Textual app for NTAG424 DNA Provisioning.
 
-    Uses a ServiceKeyManager instance connected to tag_validator_service
+    Uses a StoreKeyManager instance connected to tag_validator_service
     and SQLite data/app.db.
     """
 
@@ -98,8 +96,7 @@ class NtagProvisionerApp(App):
     def __init__(
         self,
         log_file: str | None = None,
-        key_manager: ServiceKeyManager | CsvKeyManager | None = None,
-        strict: bool = True,
+        key_manager: StoreKeyManager | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -132,18 +129,14 @@ class NtagProvisionerApp(App):
             force=True,
         )
 
-        # ServiceKeyManager instance connected to tag_validator_service and SQLite data/app.db
+        # Keys are stored straight into the configured key store (NTAG_KEY_STORE: csv default | k3s)
         if key_manager is not None:
             self.key_manager = key_manager
         else:
-            db_path = str(project_root / "data" / "app.db")
-            self.key_manager = ServiceKeyManager(
-                db_path=db_path,
-                strict=strict,
-            )
+            self.key_manager = StoreKeyManager.from_env()
 
         log = logging.getLogger(__name__)
-        log.info(f"ServiceKeyManager initialized with {len(self.key_manager.list_tags())} registered tags")
+        log.info(f"Key store ready ({self.key_manager.description}) with {len(self.key_manager.list_tags())} registered tags")
 
     def on_mount(self) -> None:
         # Pass key_manager to screens that need it
@@ -165,10 +158,6 @@ class NtagProvisionerApp(App):
         self.install_screen(
             FormatPICCScreen(key_manager=self.key_manager, id="format_picc"),
             name="format_picc",
-        )
-        self.install_screen(
-            CoinNamingScreen(key_manager=self.key_manager, id="coin_naming"),
-            name="coin_naming",
         )
         self.push_screen("menu")
 

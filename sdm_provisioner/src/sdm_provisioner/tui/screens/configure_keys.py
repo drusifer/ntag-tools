@@ -6,7 +6,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, RichLog
 from textual.worker import Worker, WorkerState
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import (
     SequenceLogger,
@@ -24,7 +24,7 @@ class ConfigureKeysAdapter:
 
     def __init__(
         self,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         sequence_logger: SequenceLogger,
         progress_callback=None,
         tag_status_widget=None,
@@ -69,7 +69,7 @@ class ConfigureKeysAdapter:
 class ConfigureKeysScreen(Screen):
     """Screen for configuring cryptographic keys on tag (Phase 1)."""
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 

@@ -5,7 +5,7 @@ from sdm_provisioner.commands.get_file_settings import GetFileSettings
 from sdm_provisioner.commands.get_key_version import GetKeyVersion
 from sdm_provisioner.commands.iso_commands import ISOFileID, ISOReadBinary, ISOSelectFile
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.tools.base import TagState, ToolResult
 from sdm_provisioner.tools.tool_helpers import read_ndef_file
@@ -29,7 +29,7 @@ class DiagnosticsTool:
         return None
 
     def execute(
-        self, tag_state: TagState, card: NTag424CardConnection, _key_mgr: CsvKeyManager
+        self, tag_state: TagState, card: NTag424CardConnection, _key_mgr: StoreKeyManager
     ) -> ToolResult:
         """Collect all diagnostic information - no I/O!"""
         diagnostics = {}

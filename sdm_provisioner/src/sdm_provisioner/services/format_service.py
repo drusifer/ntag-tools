@@ -7,7 +7,7 @@ from sdm_provisioner.commands.format_picc import FormatPICC
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 
 
@@ -23,7 +23,7 @@ class FormatService:
     def __init__(
         self,
         card: NTag424CardConnection,
-        key_mgr: CsvKeyManager,
+        key_mgr: StoreKeyManager,
         progress_callback: Callable[[str], None] | None = None,
     ):
         self.card = card
@@ -52,7 +52,6 @@ class FormatService:
             self._log("This will ERASE all data and reset ALL keys to factory!")
 
             # Debug: Log PICC Master Key (first 8 bytes only for security)
-            log.debug(f"PICC Master Key (first 8 bytes): {picc_master_key[:8].hex()}", stacklevel=2)
 
             # STEP 1: GET TAG UID
             self._log("[Step 1] Selecting PICC application...")

@@ -7,7 +7,7 @@ from sdm_provisioner.card_factory import CardConnectionFactory
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
 from sdm_provisioner.constants import StatusWord
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.sequence_logger import SequenceLogger
 from sdm_provisioner.services.key_recovery_service import (
     KeyRecoveryCandidate,
@@ -26,7 +26,7 @@ class KeyRecoveryCommand(NFCCommand):
     def __init__(
         self,
         recovery_service: KeyRecoveryService,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         selected_candidate: KeyRecoveryCandidate | None = None,
     ):
         self.recovery_service = recovery_service

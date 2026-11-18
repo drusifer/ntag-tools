@@ -1,13 +1,13 @@
 from unittest.mock import MagicMock
 import pytest
 
-from sdm_provisioner.service_key_manager import ServiceKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.tui.app import NtagProvisionerApp
 
 
 @pytest.fixture
 def mock_km():
-    km = MagicMock(spec=ServiceKeyManager)
+    km = MagicMock(spec=StoreKeyManager)
     km.list_tags.return_value = []
     return km
 

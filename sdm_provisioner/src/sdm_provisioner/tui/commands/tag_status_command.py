@@ -7,7 +7,7 @@ from sdm_provisioner.card_factory import CardConnectionFactory
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.constants import FACTORY_KEY
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.sequence_logger import SequenceLogger
 from sdm_provisioner.tui.clock import Clock, RealClock
 from sdm_provisioner.tui.nfc_command import NFCCommand
@@ -58,7 +58,7 @@ class TagStatusCommand(NFCCommand):
                 log.info("Factory Auth failed, checking provisioned keys...")
 
             # 3. Check Provisioned State
-            key_mgr = CsvKeyManager()
+            key_mgr = StoreKeyManager.from_env()
             try:
                 stored_keys = key_mgr.get_tag_keys(uid)
                 if stored_keys.status == "factory":

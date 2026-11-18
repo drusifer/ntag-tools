@@ -8,7 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, RichLog, Static
 from textual.worker import Worker, WorkerState
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import SequenceLogger
 from sdm_provisioner.services.format_service import FormatService
@@ -25,7 +25,7 @@ class FormatAdapter:
 
     def __init__(
         self,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         sequence_logger: SequenceLogger,
         picc_master_key: bytes,
         progress_callback=None,
@@ -137,7 +137,7 @@ class FormatPICCScreen(Screen):
     }
     """
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
         self.current_uid: str | None = None

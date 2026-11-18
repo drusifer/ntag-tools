@@ -7,7 +7,8 @@ from sdm_provisioner.commands.get_key_version import GetKeyVersion
 from sdm_provisioner.commands.iso_commands import ISOFileID, ISOReadBinary, ISOSelectFile
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
 from sdm_provisioner.constants import FileNo, TagStatus
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.log_utils import mask_key
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.tools.tool_helpers import read_ndef_file
@@ -31,7 +32,7 @@ class TagDiagnosticsService:
     Commands are sent authenticated when keys are available, unauthenticated otherwise.
     """
 
-    def __init__(self, card: NTag424CardConnection, key_mgr: CsvKeyManager):
+    def __init__(self, card: NTag424CardConnection, key_mgr: StoreKeyManager):
         self.card = card
         self.key_mgr = key_mgr
         self._cached_keys: TagKeys | None = None

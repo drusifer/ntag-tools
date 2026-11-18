@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 from sdm_provisioner.commands.change_key import ChangeKey
 from sdm_provisioner.commands.sdm_commands import GetChipVersion, SelectPiccApplication
 from sdm_provisioner.crypto.auth_session import Ntag424AuthSession
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import create_sequence_logger
 
@@ -65,8 +65,8 @@ def test_production_auth(tmp_path):
             
             # Get key from manager
             log.info("Step 3: Get Key from Key Manager")
-            key_mgr = CsvKeyManager()
-            key_mgr = CsvKeyManager(csv_path=str(temp_keys_path))
+            key_mgr = StoreKeyManager()
+            key_mgr = StoreKeyManager(csv_path=str(temp_keys_path))
             
             try:
                 saved_keys = key_mgr.get_tag_keys(uid)

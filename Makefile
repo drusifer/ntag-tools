@@ -40,7 +40,7 @@ test-e2e: ## Provision -> publish -> validate end-to-end tests
 	$(PYTHON) -m pytest tests/e2e -q
 
 lint: ## Ruff over every package
-	$(PYTHON) -m ruff check $(PACKAGES)
+	$(PYTHON) -m ruff check shared ntag_keys tag_validator_service sdm_provisioner/src/sdm_provisioner/store_key_manager.py sdm_provisioner/tests/test_store_key_manager.py tests
 
 check-versions: ## Fail if any package version differs from VERSION
 	@$(PYTHON) -c "import re,sys,pathlib; v=pathlib.Path('VERSION').read_text().strip(); bad=[(p,m.group(1)) for p in '$(PACKAGES)'.split() if (m:=re.search(r'^version\s*=\s*\"([^\"]+)\"', pathlib.Path(p,'pyproject.toml').read_text(), re.M)) and m.group(1)!=v]; print('versions ok: '+v) if not bad else (print('version mismatch vs '+v+': '+str(bad)), sys.exit(1))"

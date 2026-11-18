@@ -4,7 +4,7 @@ import logging
 from typing import Any
 
 from sdm_provisioner.card_factory import CardConnectionFactory
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.sequence_logger import SequenceLogger
 from sdm_provisioner.services.provisioning_service import ProvisioningService
 from sdm_provisioner.tui.clock import Clock, RealClock
@@ -33,7 +33,7 @@ class ProvisionTagCommand(NFCCommand):
             Provisioning result from ProvisioningService
         """
         with CardConnectionFactory.create(sequence_logger=SequenceLogger()) as connection:
-            key_mgr = CsvKeyManager("tag_keys.csv")
+            key_mgr = StoreKeyManager.from_env()
             service = ProvisioningService(connection, key_mgr)
 
             log = logging.getLogger(__name__)

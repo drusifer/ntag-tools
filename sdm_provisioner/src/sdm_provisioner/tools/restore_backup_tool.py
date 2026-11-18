@@ -4,7 +4,8 @@ import time
 
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.tools.base import ConfirmationRequest, TagState, ToolResult
 
@@ -35,7 +36,7 @@ class RestoreBackupTool:
         )
 
     def execute(
-        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: CsvKeyManager
+        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: StoreKeyManager
     ) -> ToolResult:
         """Iterate through backup snapshots until authentication succeeds."""
         # tag_state.uid is already a UID object

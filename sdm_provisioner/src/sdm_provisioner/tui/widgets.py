@@ -7,7 +7,8 @@ from textual.app import ComposeResult
 from textual.reactive import reactive
 from textual.widgets import DataTable, Static
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 
 
 log = logging.getLogger(__name__)
@@ -152,11 +153,11 @@ class TagStatusWidget(Static):
         self.key1_version = key1_ver
         self.key3_version = key3_ver
 
-    def update_from_database(self, key_manager: CsvKeyManager, uid: str) -> None:
+    def update_from_database(self, key_manager: StoreKeyManager, uid: str) -> None:
         """Update widget with database values.
 
         Args:
-            key_manager: CsvKeyManager instance
+            key_manager: StoreKeyManager instance
             uid: Tag UID as hex string
         """
         try:
@@ -354,7 +355,7 @@ class TagKeysDetailWidget(Static):
         """Update widget with keys from database.
 
         Args:
-            tag_keys: TagKeys object from CsvKeyManager, or None if not found
+            tag_keys: TagKeys object from StoreKeyManager, or None if not found
         """
         if tag_keys is None:
             self.picc_key = self.FACTORY_KEY

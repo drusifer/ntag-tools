@@ -4,7 +4,8 @@ import pytest
 from sdm_provisioner.uid_utils import UID
 
 from sdm_provisioner.constants import TagStatus
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.sequence_logger import create_sequence_logger
 from sdm_provisioner.seritag_simulator import SeritagCardManager
 from sdm_provisioner.services.diagnostics_service import TagDiagnosticsService
@@ -14,7 +15,7 @@ class TestTagDiagnosticsService:
     
     @pytest.fixture
     def mock_key_mgr(self):
-        return MagicMock(spec=CsvKeyManager)
+        return MagicMock(spec=StoreKeyManager)
     
     @pytest.fixture
     def sequence_logger(self):

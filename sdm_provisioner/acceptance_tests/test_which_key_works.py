@@ -6,7 +6,7 @@ Try to authenticate with various keys to determine the tag's current state.
 
 from sdm_provisioner.commands.sdm_commands import GetChipVersion, SelectPiccApplication
 from sdm_provisioner.crypto.auth_session import Ntag424AuthSession
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import create_sequence_logger
 
@@ -39,7 +39,7 @@ def test_which_key_works():
             print(f"  [FAILED] {e}")
         
         # Try saved keys
-        key_mgr = CsvKeyManager()
+        key_mgr = StoreKeyManager()
         try:
             saved_keys = key_mgr.get_tag_keys(uid)
             

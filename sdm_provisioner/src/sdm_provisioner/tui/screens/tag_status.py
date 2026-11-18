@@ -6,7 +6,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, RichLog
 from textual.worker import Worker, WorkerState
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager, Outcome
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import (
     SequenceLogger,
@@ -27,7 +27,7 @@ class DiagnosticsAdapter:
 
     def __init__(
         self,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         sequence_logger: SequenceLogger,
         tag_status_widget=None,
     ):
@@ -68,26 +68,11 @@ class DiagnosticsAdapter:
                     status = f"{db_status.title() if db_status else ''} (Registered)"
                 provisioned_date = tag_status.db_keys.provisioned_date
                 asset_tag = tag_status.db_keys.get_asset_tag()
-                coin_name = tag_status.db_keys.coin_name or "Unassigned"
-                outcome = tag_status.db_keys.outcome.value if hasattr(tag_status.db_keys.outcome, 'value') else str(tag_status.db_keys.outcome)
-
-                # Get partner tag UID if coin is assigned
-                partner_uid = None
-                if tag_status.db_keys.coin_name:
-                    coin_tags = self.key_manager.get_coin_tags(tag_status.db_keys.coin_name)
-                    # Find the other side of the coin
-                    if tag_status.db_keys.outcome == Outcome.HEADS and coin_tags['tails']:
-                        partner_uid = coin_tags['tails'].uid.uid
-                    elif tag_status.db_keys.outcome == Outcome.TAILS and coin_tags['heads']:
-                        partner_uid = coin_tags['heads'].uid.uid
             else:
                 status = "Factory (Not Registered)"
                 db_status = None
                 provisioned_date = None
                 asset_tag = None
-                coin_name = "Unassigned"
-                outcome = "unknown"
-                partner_uid = None
 
             return {
                 "uid": tag_status.uid,
@@ -96,9 +81,6 @@ class DiagnosticsAdapter:
                 "db_status": db_status,
                 "provisioned_date": provisioned_date,
                 "asset_tag": asset_tag,
-                "coin_name": coin_name,
-                "outcome": outcome,
-                "partner_uid": partner_uid,
                 "hw_version": f"{tag_status.hw_major_version}.{tag_status.hw_minor_version}",
             }
 
@@ -106,7 +88,7 @@ class DiagnosticsAdapter:
 class TagStatusScreen(Screen):
     """Screen for checking tag status (Factory vs Provisioned)."""
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 
@@ -205,18 +187,11 @@ class TagStatusScreen(Screen):
                 asset_tag = result.get("asset_tag", "")  # type: ignore[union-attr]
                 registered = result.get("registered", False)  # type: ignore[union-attr]
                 provisioned_date = result.get("provisioned_date", "")  # type: ignore[union-attr]
-                coin_name = result.get("coin_name", "Unassigned")  # type: ignore[union-attr]
-                outcome = result.get("outcome", "unknown")  # type: ignore[union-attr]
-                partner_uid = result.get("partner_uid")  # type: ignore[union-attr]
 
                 # Build display info
                 info_parts = [f"UID: {uid}"]
                 if asset_tag:
                     info_parts.append(f"Tag: {asset_tag}")
-                if coin_name != "Unassigned":
-                    info_parts.append(f"Coin: {coin_name} ({outcome})")
-                if partner_uid:
-                    info_parts.append(f"Partner: {partner_uid}")
                 if registered and provisioned_date:
                     info_parts.append(f"Date: {provisioned_date[:10]}")
 

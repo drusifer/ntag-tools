@@ -12,7 +12,7 @@ else
 PYTHON ?= python3
 endif
 
-export PYTHONPATH := src:../shared/src:../tag_validator_service/src$(if $(PYTHONPATH),:$(PYTHONPATH))
+export PYTHONPATH := src:../shared/src:../ntag_keys/src:../tag_validator_service/src$(if $(PYTHONPATH),:$(PYTHONPATH))
 
 help: ## Show available make targets
 	@echo "Available targets for sdm_provisioner:"

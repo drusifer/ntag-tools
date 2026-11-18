@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from shared.outcome import Outcome
 from shared.uid import UID
 
 
@@ -27,8 +26,6 @@ class TagKeys:
     picc_master_key: str
     app_read_key: str
     sdm_mac_key: str
-    outcome: Outcome = Outcome.INVALID
-    coin_name: str = ""
     provisioned_date: str = ""
     status: str = "factory"
     notes: str = ""
@@ -37,8 +34,6 @@ class TagKeys:
     def __post_init__(self) -> None:
         if isinstance(self.uid, (str, bytes, bytearray)):
             self.uid = UID(self.uid)
-        if isinstance(self.outcome, str):
-            self.outcome = Outcome(self.outcome)
 
     def get_picc_master_key_bytes(self) -> bytes:
         return bytes.fromhex(self.picc_master_key)
@@ -61,8 +56,6 @@ class TagKeys:
             picc_master_key=factory_key,
             app_read_key=factory_key,
             sdm_mac_key=factory_key,
-            outcome=Outcome.INVALID,
-            coin_name="",
             provisioned_date=datetime.now(UTC).isoformat(),
             status="factory",
             notes="Factory default keys",

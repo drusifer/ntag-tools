@@ -1,12 +1,14 @@
-"""Characterization tests for UID type handling in CsvKeyManager.
+"""Characterization tests for UID type handling in StoreKeyManager.
 
 These tests document and verify the expected behavior for UID normalization.
-The goal: CsvKeyManager and TagKeys use UID objects consistently throughout.
+The goal: StoreKeyManager and TagKeys use UID objects consistently throughout.
 """
 
 import pytest
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from ntag_keys import CsvSecretStore
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.uid_utils import UID
 
 
@@ -54,7 +56,7 @@ class TestTagKeysUidNormalization:
 
     def test_short_uid_raises_value_error(self):
         """UID rejects invalid length strings."""
-        with pytest.raises(ValueError, match="contain an even"):
+        with pytest.raises(ValueError, match="even|hexadecimal"):
             UID("04B3664A2F7")
 
         with pytest.raises(ValueError, match="at least 7"):
@@ -82,20 +84,14 @@ class TestTagKeysUidNormalization:
         assert isinstance(asset_tag, str)
 
 
-class TestCsvKeyManagerUidHandling:
-    """Test CsvKeyManager with UID objects."""
+class TestStoreKeyManagerUidHandling:
+    """Test StoreKeyManager with UID objects."""
 
     @pytest.fixture
     def temp_csv(self, tmp_path):
         """Create a temporary CSV file for testing."""
         csv_path = tmp_path / "test_keys.csv"
-        backup_path = tmp_path / "test_keys_backup.csv"
-        backup_dir = tmp_path / "test_backups"
-        return CsvKeyManager(
-            csv_path=str(csv_path),
-            backup_path=str(backup_path),
-            timestamped_backup_dir=str(backup_dir),
-        )
+        return StoreKeyManager(CsvSecretStore(csv_path))
 
     def test_get_tag_keys_with_uppercase_uid(self, temp_csv):
         """get_tag_keys works with uppercase UID."""
@@ -151,69 +147,20 @@ class TestCsvKeyManagerUidHandling:
         assert keys.uid.uid == "04B3664A2F7080"
         assert keys.status == "provisioned"
 
-    def test_save_tag_keys_updates_existing_row(self, temp_csv):
-        """save_tag_keys updates existing row instead of creating duplicate."""
-        # Save initial keys
-        keys1 = TagKeys(
-            uid=UID("04B3664A2F7080"),
-            picc_master_key="AA" * 16,
-            app_read_key="BB" * 16,
-            sdm_mac_key="CC" * 16,
-            provisioned_date="2025-01-01T00:00:00",
-            status="provisioned",
-        )
-        temp_csv.save_tag_keys(keys1)
+    def test_saving_the_same_keys_again_keeps_one_row(self, temp_csv):
+        """Re-saving a tag's keys (any UID case) updates the one row; it never duplicates."""
+        k = dict(picc_master_key="AA" * 16, app_read_key="BB" * 16, sdm_mac_key="CC" * 16)
+        temp_csv.save_tag_keys(TagKeys(uid=UID("04B3664A2F7080"), status="provisioned", **k))
+        temp_csv.save_tag_keys(TagKeys(uid=UID("04b3664a2f7080"), status="active", **k))
+        assert len(temp_csv.list_tags()) == 1
+        assert temp_csv.get_tag_keys(UID("04B3664A2F7080")).sdm_mac_key == "CC" * 16
 
-        # Save updated keys for same UID
-        keys2 = TagKeys(
-            uid=UID("04B3664A2F7080"),
-            picc_master_key="DD" * 16,
-            app_read_key="EE" * 16,
-            sdm_mac_key="FF" * 16,
-            provisioned_date="2025-01-02T00:00:00",
-            status="updated",
-        )
-        temp_csv.save_tag_keys(keys2)
+    def test_different_keys_for_a_stored_tag_are_refused(self, temp_csv):
+        """Keys are write-once: replacing them is refused with a clear error."""
+        from sdm_provisioner.store_key_manager import KeyStoreError
 
-        # Verify only one row exists
-        import csv
-        with open(temp_csv.csv_path) as f:
-            reader = csv.DictReader(f)
-            rows = [r for r in reader if r["uid"] == "04B3664A2F7080"]
-
-        assert len(rows) == 1, f"Expected 1 row, got {len(rows)} rows"
-        assert rows[0]["picc_master_key"] == "DD" * 16
-        assert rows[0]["status"] == "updated"
-
-    def test_save_tag_keys_handles_case_insensitive_uid(self, temp_csv):
-        """save_tag_keys matches UID case-insensitively."""
-        # Save with uppercase
-        keys1 = TagKeys(
-            uid=UID("04B3664A2F7080"),
-            picc_master_key="AA" * 16,
-            app_read_key="BB" * 16,
-            sdm_mac_key="CC" * 16,
-            provisioned_date="2025-01-01T00:00:00",
-            status="provisioned",
-        )
-        temp_csv.save_tag_keys(keys1)
-
-        # Update with lowercase UID
-        keys2 = TagKeys(
-            uid=UID("04b3664a2f7080"),  # lowercase
-            picc_master_key="DD" * 16,
-            app_read_key="EE" * 16,
-            sdm_mac_key="FF" * 16,
-            provisioned_date="2025-01-02T00:00:00",
-            status="updated",
-        )
-        temp_csv.save_tag_keys(keys2)
-
-        # Verify only one row exists
-        import csv
-        with open(temp_csv.csv_path) as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-
-        assert len(rows) == 1, f"Expected 1 row, got {len(rows)} rows"
-        assert rows[0]["picc_master_key"] == "DD" * 16
+        temp_csv.save_tag_keys(TagKeys(uid=UID("04B3664A2F7080"), picc_master_key="AA" * 16,
+                                       app_read_key="BB" * 16, sdm_mac_key="CC" * 16))
+        with pytest.raises(KeyStoreError, match="immutable"):
+            temp_csv.save_tag_keys(TagKeys(uid=UID("04B3664A2F7080"), picc_master_key="DD" * 16,
+                                           app_read_key="EE" * 16, sdm_mac_key="FF" * 16))

@@ -6,7 +6,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, RichLog
 from textual.worker import Worker, WorkerState
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager, Outcome
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import (
     SequenceLogger,
@@ -24,17 +24,13 @@ class ServiceAdapter:
     def __init__(
         self,
         base_url: str,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         sequence_logger: SequenceLogger,
-        coin_name: str = "",
-        outcome: Outcome = Outcome.HEADS,
         progress_callback=None,
     ):
         self.base_url = base_url
         self.key_manager = key_manager
         self.sequence_logger = sequence_logger
-        self.coin_name = coin_name
-        self.outcome = outcome
         self.progress_callback = progress_callback
         self.operation_name = "Provision Tag"
 
@@ -47,7 +43,7 @@ class ServiceAdapter:
         # Pass sequence logger to CardManager (explicit DI)
         with CardManager(sequence_logger=self.sequence_logger) as card:
             service = ProvisioningService(card, self.key_manager, self.progress_callback)
-            success = service.provision(self.base_url, self.coin_name, self.outcome)
+            success = service.provision(self.base_url)
 
             if not success:
                 raise Exception("Provisioning failed (check logs)")
@@ -55,9 +51,9 @@ class ServiceAdapter:
 
 
 class ProvisionScreen(Screen):
-    """Screen for provisioning a tag with auto-detected coin name and outcome."""
+    """Screen for provisioning a tag (keys + URL)."""
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 
@@ -65,7 +61,6 @@ class ProvisionScreen(Screen):
         yield Header()
         yield Container(
             Label("Provision Tag", id="title"),
-            Label("", id="coin_assignment_label"),
             Label("Ready to provision...", id="status_label"),
             Label("", id="status_timer"),
             Label("", id="error_label"),
@@ -90,8 +85,6 @@ class ProvisionScreen(Screen):
         # Initialize WorkerManager
         self._worker_mgr = WorkerManager(self)
 
-        # Show auto-detected coin assignment
-        self._update_coin_assignment_display()
 
     def on_unmount(self) -> None:
         if hasattr(self, "_log_handler"):
@@ -100,12 +93,6 @@ class ProvisionScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn_start":
             self.start_provisioning()
-
-    def _update_coin_assignment_display(self) -> None:
-        """Update the display to show the auto-detected coin assignment."""
-        coin_name, outcome = self.key_manager.get_next_coin_assignment()
-        label = self.query_one("#coin_assignment_label", Label)
-        label.update(f"Next tag: {coin_name} ({outcome.value})")
 
     def start_provisioning(self) -> None:
         self.query_one("#btn_start", Button).disabled = True
@@ -142,18 +129,11 @@ class ProvisionScreen(Screen):
         seq.on_step_complete = on_step
         self._sequence_logger = seq  # Store for summary display
 
-        # Auto-detect coin name and outcome from CSV state
-        coin_name, outcome = self.key_manager.get_next_coin_assignment()
-        self._current_coin_name = coin_name
-        self._current_outcome = outcome
-
-        # Create adapter with injected dependencies (including coin info)
+        # Create adapter with injected dependencies
         cmd = ServiceAdapter(
             base_url="https://example.com/verify",
             key_manager=self.key_manager,
             sequence_logger=seq,
-            coin_name=coin_name,
-            outcome=outcome,
             progress_callback=self._log_handler.emit_message
             if hasattr(self, "_log_handler")
             else None,
@@ -172,20 +152,12 @@ class ProvisionScreen(Screen):
 
             if event.state == WorkerState.SUCCESS:
                 self.query_one("#status_label", Label).update("Provisioning Complete!")
-                # Show success banner with coin info
                 success_label = self.query_one("#success_label", Label)
-                coin_name = getattr(self, "_current_coin_name", "unknown")
-                outcome = getattr(self, "_current_outcome", Outcome.INVALID)
-                success_label.update(
-                    f"✓ Provisioning Successful! Coin: {coin_name} ({outcome.value})"
-                )
+                success_label.update("✓ Provisioning Successful!")
                 success_label.add_class("visible")
                 self.query_one("#btn_start", Button).disabled = False
                 log = logging.getLogger(__name__)
                 log.info("Worker finished successfully.")
-
-                # Update display for next tag
-                self._update_coin_assignment_display()
 
                 # Show summary (steps already displayed live)
                 if hasattr(self, "_sequence_logger") and self._sequence_logger:

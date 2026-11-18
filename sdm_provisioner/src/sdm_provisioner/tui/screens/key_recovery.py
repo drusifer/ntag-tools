@@ -19,7 +19,8 @@ from sdm_provisioner.card_factory import CardConnectionFactory
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.get_key_version import GetKeyVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.sequence_logger import SequenceLogger
 from sdm_provisioner.services.key_recovery_service import (
     KeyRecoveryCandidate,
@@ -176,7 +177,7 @@ class KeyRecoveryScreen(Screen):
     }
     """
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 

@@ -11,8 +11,7 @@ from contextlib import contextmanager
 
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
-from sdm_provisioner.csv_key_manager import CsvKeyManager
-from sdm_provisioner.service_key_manager import ServiceKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager, NTag424CardConnection
 from sdm_provisioner.sequence_logger import SequenceLogger, create_sequence_logger
 from sdm_provisioner.tools.base import TagState, Tool, ToolResult
@@ -42,7 +41,7 @@ class ToolRunner:
 
     def __init__(
         self,
-        key_mgr: ServiceKeyManager | CsvKeyManager,
+        key_mgr: StoreKeyManager,
         tools: list[Tool],
         reader_index: int = 0,
     ):

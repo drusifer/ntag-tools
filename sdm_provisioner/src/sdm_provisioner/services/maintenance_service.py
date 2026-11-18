@@ -15,7 +15,7 @@ from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
 from sdm_provisioner.constants import FACTORY_KEY
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.uid_utils import UID
 
@@ -33,7 +33,7 @@ class TagMaintenanceService:
     def __init__(
         self,
         card: NTag424CardConnection,
-        key_mgr: CsvKeyManager,
+        key_mgr: StoreKeyManager,
         progress_callback: Callable[[str], None] | None = None,
     ):
         self.card = card

@@ -11,7 +11,7 @@ from sdm_provisioner.commands.change_file_settings import (
     ChangeFileSettings,
     ChangeFileSettingsAuth,
 )
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.services.provisioning_service import ProvisioningService
 
@@ -34,9 +34,9 @@ def mock_auth_connection():
 
 @pytest.fixture
 def key_manager(tmp_path):
-    """Provides a CsvKeyManager with a temporary keys file."""
+    """Provides a StoreKeyManager with a temporary keys file."""
     keys_file = tmp_path / "tag_keys.csv"
-    return CsvKeyManager(str(keys_file))
+    return StoreKeyManager(str(keys_file))
 
 
 @patch("sdm_provisioner.services.provisioning_service.AuthenticateEV2")

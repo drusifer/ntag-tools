@@ -7,7 +7,7 @@ between business logic (tools) and I/O (runner).
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 
 
@@ -79,7 +79,7 @@ class Tool(Protocol):
         ...
 
     def execute(
-        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: CsvKeyManager
+        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: StoreKeyManager
     ) -> ToolResult:
         """Execute tool logic - NO I/O!
 

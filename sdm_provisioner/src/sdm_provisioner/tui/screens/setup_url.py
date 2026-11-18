@@ -8,7 +8,7 @@ from textual.widgets import Button, Footer, Header, Input, Label, RichLog
 from textual.worker import Worker, WorkerState
 
 from sdm_provisioner.constants import BIZ_CARD_BASE_URL, GAME_COIN_BASE_URL
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import (
     SequenceLogger,
@@ -29,7 +29,7 @@ class SetupUrlAdapter:
     def __init__(
         self,
         base_url: str,
-        key_manager: CsvKeyManager,
+        key_manager: StoreKeyManager,
         sequence_logger: SequenceLogger,
         progress_callback=None,
     ):
@@ -81,7 +81,7 @@ class SetupUrlScreen(Screen):
         Binding("ctrl+b", "select_preset_biz", "Biz URL", priority=True),
     ]
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 

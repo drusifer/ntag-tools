@@ -4,7 +4,7 @@ from sdm_provisioner.commands.iso_commands import ISOFileID, ISOSelectFile
 from sdm_provisioner.commands.sdm_helpers import build_ndef_uri_record
 from sdm_provisioner.commands.write_ndef_message import WriteNdefMessage
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import NTag424CardConnection
 from sdm_provisioner.tools.base import ConfirmationRequest, TagState, ToolResult
 from sdm_provisioner.tools.tool_helpers import (
@@ -53,7 +53,7 @@ class ConfigureSdmTool:
         )
 
     def execute(
-        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: CsvKeyManager
+        self, tag_state: TagState, card: NTag424CardConnection, key_mgr: StoreKeyManager
     ) -> ToolResult:
         """Configure SDM - pure business logic, no I/O.
 

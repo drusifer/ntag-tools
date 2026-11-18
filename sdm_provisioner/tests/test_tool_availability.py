@@ -5,7 +5,7 @@ Tests each tool's is_available() method with various tag states.
 
 import pytest
 
-from sdm_provisioner.csv_key_manager import TagKeys
+from shared import TagKeys
 from sdm_provisioner.tools.base import TagState
 from sdm_provisioner.tools.configure_sdm_tool import ConfigureSdmTool
 from sdm_provisioner.tools.diagnostics_tool import DiagnosticsTool

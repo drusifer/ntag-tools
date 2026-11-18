@@ -22,7 +22,7 @@ class TestTagStatusCommand:
             
     @pytest.fixture
     def mock_key_manager(self):
-        with patch('sdm_provisioner.tui.commands.tag_status_command.CsvKeyManager') as mock:
+        with patch('sdm_provisioner.tui.commands.tag_status_command.StoreKeyManager') as mock:
             yield mock.return_value
 
     @pytest.fixture

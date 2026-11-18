@@ -25,7 +25,7 @@ class CardConnectionFactory:
 
         Args:
             sequence_logger: Logger for command sequence tracing (required)
-            key_store: Optional key store. For real hardware, defaults to real ServiceKeyManager.
+            key_store: Optional key store. For real hardware, defaults to a StoreKeyManager from the environment.
 
         Returns:
             AbstractContextManager yielding NTag424CardConnection-compatible object

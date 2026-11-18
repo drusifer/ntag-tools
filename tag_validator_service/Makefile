@@ -14,7 +14,7 @@ IMAGE_NAME ?= $(IMAGE_REPO):$(VERSION)
 PORT ?= 8080
 NAMESPACE ?= tag-secrets
 
-export PYTHONPATH := src$(if $(PYTHONPATH),:$(PYTHONPATH))
+export PYTHONPATH := src:../ntag_keys/src$(if $(PYTHONPATH),:$(PYTHONPATH))
 
 help: ## Show available make targets
 	@echo "Available targets:"

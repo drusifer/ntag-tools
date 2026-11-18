@@ -26,7 +26,8 @@ from sdm_provisioner.constants import (
     SDMUrlTemplate,
 )
 from sdm_provisioner.crypto.auth_session import AuthenticateEV2
-from sdm_provisioner.csv_key_manager import CsvKeyManager, Outcome, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.hal import NTag424CardConnection
 
 
@@ -58,20 +59,16 @@ class ProvisioningService:
         # Pull key_store directly from HAL if not explicitly passed
         self.key_mgr = key_mgr or getattr(card, "key_store", None)
         if self.key_mgr is None:
-            from sdm_provisioner.service_key_manager import ServiceKeyManager
+            self.key_mgr = StoreKeyManager.from_env()
 
-            self.key_mgr = ServiceKeyManager()
-
-        # Enforce that real hardware HAL strictly requires the real persistent key store
+        # Real hardware strictly requires a persistent key store (CSV file or k3s), never memory or mocks
         is_sim = getattr(card, "is_simulation", False) or (os.environ.get("NTAG_SIMULATION") == "1")
         if not is_sim:
-            from sdm_provisioner.service_key_manager import ServiceKeyManager
-
-            if not isinstance(self.key_mgr, ServiceKeyManager):
+            if not isinstance(self.key_mgr, StoreKeyManager) or not self.key_mgr.is_persistent:
                 raise RuntimeError(
-                    f"CRITICAL HARDWARE KEY SAFETY RULE:\n"
+                    "CRITICAL HARDWARE KEY SAFETY RULE:\n"
                     f"Provisioning real hardware with key manager '{self.key_mgr.__class__.__name__}' is forbidden.\n"
-                    f"Real hardware HAL requires the real persistent ServiceKeyManager connected to the cluster."
+                    "Real hardware requires a persistent StoreKeyManager (CSV file or k3s)."
                 )
 
         self.progress_callback = progress_callback
@@ -202,9 +199,6 @@ class ProvisioningService:
 
             with self.key_mgr.provision_tag(version.uid, url=None) as new_keys:
                 self._log("  New keys generated (status='pending')")
-                self._log(f"  PICC Master: {new_keys.picc_master_key[:16]}...")
-                self._log(f"  App Read:    {new_keys.app_read_key[:16]}...")
-                self._log(f"  SDM MAC:     {new_keys.sdm_mac_key[:16]}...")
 
                 # SESSION 1: Change Key 0
                 self._log("[SESSION 1] Changing PICC Master Key (Key 0)...")
@@ -330,9 +324,7 @@ class ProvisioningService:
                 self._log(f"  Found in database (status={current_keys.status})")
                 # DEBUG: Log all keys that will be used
                 self._log("[URL PROVISIONING] Keys loaded from database:")
-                self._log(f"  PICC Master Key: {current_keys.picc_master_key}")
-                self._log(f"  App Read Key: {current_keys.app_read_key}")
-                self._log(f"  SDM MAC Key (Key 3): {current_keys.sdm_mac_key}")
+                self._log("  (key values are not displayed)")
                 self._log(f"  Database path: {getattr(self.key_mgr, 'csv_path', self.key_mgr)}")
             except Exception as e:
                 raise ValueError("Tag not in database! Run provision_keys() or key recovery first.") from e
@@ -393,8 +385,6 @@ class ProvisioningService:
     def provision(
         self,
         base_url: str = GAME_COIN_BASE_URL,
-        coin_name: str = "",
-        outcome: Outcome = Outcome.INVALID,
     ) -> bool:
         """Execute complete provisioning workflow with 3-session approach.
 
@@ -413,8 +403,6 @@ class ProvisioningService:
 
         Args:
             base_url: Base URL for SDM configuration
-            coin_name: Optional coin identifier (e.g., "SWIFT-FALCON-42")
-            outcome: Optional outcome (HEADS | TAILS | INVALID for unassigned)
         """
         try:
             self._log("Starting provisioning...")
@@ -500,15 +488,9 @@ class ProvisioningService:
             # STEP 2: IF FACTORY → SET KEYS
             self._log("[Step 2] Starting two-phase key provisioning...")
 
-            with self.key_mgr.provision_tag(
-                version.uid, url=base_url, coin_name=coin_name, outcome=outcome
-            ) as new_keys:
+            with self.key_mgr.provision_tag(version.uid, url=base_url) as new_keys:
                 self._log("  New keys generated (status='pending')")
-                if coin_name:
-                    self._log(f"  Coin: {coin_name} ({outcome.value})")
-                self._log(f"  PICC Master: {new_keys.picc_master_key[:16]}...")
-                self._log(f"  App Read:    {new_keys.app_read_key[:16]}...")
-                self._log(f"  SDM MAC:     {new_keys.sdm_mac_key[:16]}...")
+                self._log("  Keys saved in the key store (values are not displayed)")
 
                 # SESSION 1: Change Key 0 (invalidates session!)
                 self._log("[SESSION 1] Changing PICC Master Key (Key 0)...")

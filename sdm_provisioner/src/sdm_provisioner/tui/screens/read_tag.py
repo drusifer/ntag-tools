@@ -6,7 +6,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, RichLog, Static
 from textual.worker import Worker, WorkerState
 
-from sdm_provisioner.csv_key_manager import CsvKeyManager
+from sdm_provisioner.store_key_manager import StoreKeyManager
 from sdm_provisioner.hal import CardManager
 from sdm_provisioner.sequence_logger import (
     SequenceLogger,
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 class FullDiagnosticsAdapter:
     """Adapts TagDiagnosticsService.get_full_diagnostics to WorkerManager protocol."""
 
-    def __init__(self, key_manager: CsvKeyManager, sequence_logger: SequenceLogger):
+    def __init__(self, key_manager: StoreKeyManager, sequence_logger: SequenceLogger):
         self.key_manager = key_manager
         self.sequence_logger = sequence_logger
         self.operation_name = "Read Tag Info"
@@ -68,7 +68,7 @@ class ReadTagScreen(Screen):
     }
     """
 
-    def __init__(self, key_manager: CsvKeyManager, **kwargs):
+    def __init__(self, key_manager: StoreKeyManager, **kwargs):
         super().__init__(**kwargs)
         self.key_manager = key_manager
 

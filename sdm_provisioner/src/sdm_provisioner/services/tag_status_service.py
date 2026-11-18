@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from sdm_provisioner.commands.get_chip_version import GetChipVersion
 from sdm_provisioner.commands.get_key_version import GetKeyVersion
 from sdm_provisioner.commands.select_picc_application import SelectPiccApplication
-from sdm_provisioner.csv_key_manager import CsvKeyManager, TagKeys
+from sdm_provisioner.store_key_manager import StoreKeyManager
+from shared import TagKeys
 from sdm_provisioner.hal import NTag424CardConnection
 
 
@@ -38,7 +39,7 @@ class TagStatus:
 class TagStatusService:
     """Service for reading tag hardware and database status."""
 
-    def __init__(self, card: NTag424CardConnection, key_manager: CsvKeyManager):
+    def __init__(self, card: NTag424CardConnection, key_manager: StoreKeyManager):
         """Initialize the service.
 
         Args:

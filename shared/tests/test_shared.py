@@ -1,7 +1,8 @@
 """Unit tests for shared package contracts."""
 
 import pytest
-from shared import UID, Outcome, TagKeys, mask_key
+
+from shared import UID, TagKeys, mask_key
 
 
 def test_uid_from_hex_and_bytes():
@@ -21,23 +22,15 @@ def test_uid_validation():
         UID("040102")
 
 
-def test_outcome_enum():
-    assert Outcome("heads") == Outcome.HEADS
-    assert Outcome("tails") == Outcome.TAILS
-    assert Outcome("unknown") == Outcome.INVALID
-
-
 def test_tag_keys_dataclass():
     tk = TagKeys(
         uid="046E6B4A2F7080",
         picc_master_key="00" * 16,
         app_read_key="11" * 16,
         sdm_mac_key="22" * 16,
-        outcome="heads",
-        coin_name="GOLDEN-DRAGON",
     )
     assert isinstance(tk.uid, UID)
-    assert tk.outcome == Outcome.HEADS
+    assert not hasattr(tk, "outcome") and not hasattr(tk, "coin_name")
     assert tk.get_picc_master_key_bytes() == bytes.fromhex("00" * 16)
     assert tk.get_app_read_key_bytes() == bytes.fromhex("11" * 16)
     assert tk.get_sdm_mac_key_bytes() == bytes.fromhex("22" * 16)
