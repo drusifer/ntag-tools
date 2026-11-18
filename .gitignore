@@ -11,3 +11,6 @@ dist/
 *.swp
 *.log
 test_tag_keys_backup*.csv
+data/
+test_tag_keys_backups/
+tui_*.log
