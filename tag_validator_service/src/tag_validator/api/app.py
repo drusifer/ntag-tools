@@ -14,7 +14,7 @@ from collections.abc import Callable
 from typing import Any
 from urllib.parse import parse_qs
 
-from ..config import get_config
+from ..config import get_config, resolve_mode
 from ..crypto.cmac_engine import generate_sdm_key, verify_sdm_cmac
 from ..models import TagSecret, ValidationResult
 from ..store import TagKeyStore, create_secret_store
@@ -23,12 +23,15 @@ from ..store.base import CounterStoreError, KeyConflictError
 log = logging.getLogger(__name__)
 
 FEATURES = ("consume",)
+VALIDATE_ONLY_FEATURE = "validate-only"
+OPEN_PATHS = ("/healthz", "/health", "/readyz", "/ready", "/api/v1/validate")
 
 
 class TagValidatorApp:
     """WSGI Application for stateless tag validation and k3s secret management."""
 
-    def __init__(self, store: TagKeyStore | None = None) -> None:
+    def __init__(self, store: TagKeyStore | None = None, mode: str | None = None) -> None:
+        self.mode = resolve_mode(mode)
         if store is not None:
             self.store = store
         else:
@@ -37,6 +40,7 @@ class TagValidatorApp:
                 backend=cfg.secret_store_backend,
                 namespace=cfg.tag_secrets_namespace,
                 kubeconfig_path=cfg.kubeconfig_path or None,
+                csv_path=cfg.csv_path,
             )
 
     def __call__(
@@ -52,6 +56,9 @@ class TagValidatorApp:
             return self._cors_response(start_response)
 
         try:
+            # Validate-only mode: nothing that reads, writes or generates keys is reachable.
+            if self.mode == "validate" and path not in OPEN_PATHS:
+                return self._json_response(start_response, 404, {"error": "Endpoint Not Found"})
             # Route matching
             if path in ("/healthz", "/health"):
                 return self._handle_healthz(start_response)
@@ -101,7 +108,7 @@ class TagValidatorApp:
             "service": "tag-validator-service",
             "stateless": True,
             # Optional behaviours a caller can rely on. tto refuses to report ready without "consume".
-            "features": list(FEATURES),
+            "features": [*FEATURES, VALIDATE_ONLY_FEATURE] if self.mode == "validate" else list(FEATURES),
         })
 
     def _handle_readyz(self, start_response: Callable) -> list[bytes]:
@@ -469,9 +476,9 @@ class TagValidatorApp:
         return [b""]
 
 
-def create_app(store: TagKeyStore | None = None) -> TagValidatorApp:
+def create_app(store: TagKeyStore | None = None, mode: str | None = None) -> TagValidatorApp:
     """Factory creating configured TagValidatorApp WSGI application."""
-    return TagValidatorApp(store=store)
+    return TagValidatorApp(store=store, mode=mode)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -479,7 +486,10 @@ def main(argv: list[str] | None = None) -> None:
     import argparse
     from wsgiref.simple_server import make_server
 
-    cfg = get_config()
+    try:
+        cfg = get_config()
+    except ValueError as e:
+        raise SystemExit(str(e)) from e
     parser = argparse.ArgumentParser(description="Run NTAG 424 DNA Tag Validator Service")
     parser.add_argument(
         "--host",
@@ -494,9 +504,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--backend",
-        choices=["memory", "k3s"],
+        choices=["csv", "memory", "k3s"],
         default=cfg.secret_store_backend,
-        help="Secret store backend (default: SECRET_STORE_BACKEND env or memory)",
+        help="Secret store backend (default: SECRET_STORE_BACKEND env or memory; csv uses TAG_KEYS_CSV)",
     )
     parser.add_argument(
         "--namespace",
@@ -514,6 +524,7 @@ def main(argv: list[str] | None = None) -> None:
         backend=args.backend,
         namespace=args.namespace,
         kubeconfig_path=cfg.kubeconfig_path or None,
+        csv_path=cfg.csv_path,
     )
     app = create_app(store=store)
     if args.check:

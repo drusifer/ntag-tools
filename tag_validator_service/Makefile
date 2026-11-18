@@ -38,7 +38,7 @@ run: ## Run service locally using Python WSGI server
 	$(PYTHON) -m tag_validator.api.app --host 0.0.0.0 --port $(PORT)
 
 docker-build: ## Build standalone container image
-	docker build -t tag-validator-service -t $(IMAGE_NAME) .
+	docker build -f Dockerfile --ignorefile Dockerfile.dockerignore -t tag-validator-service -t $(IMAGE_NAME) ..
 
 pkg: docker-build ## Alias for docker-build (consistent with pi-patch packaging workflow)
 

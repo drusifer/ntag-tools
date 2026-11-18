@@ -47,17 +47,18 @@ def test_app_main_check_entrypoint(
 
 
 def test_container_and_pi_patch_packaging_contracts() -> None:
-    """Verify Dockerfile, .dockerignore, and Makefile targets for standalone pi-patch container export."""
+    """Verify Dockerfile, Dockerfile.dockerignore, and Makefile targets for standalone pi-patch container export."""
     dockerfile = (SERVICE_ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert "requirements.txt" not in dockerfile
-    assert "COPY pyproject.toml README.md /app/" in dockerfile
-    assert 'pip install --no-cache-dir ".[k3s,server]" && pip check' in dockerfile
+    assert "COPY tag_validator_service/pyproject.toml" in dockerfile
+    assert "COPY ntag_keys/src/" in dockerfile
+    assert '"./tag_validator_service[k3s,server]" && pip check' in dockerfile
     assert "--worker-tmp-dir" in dockerfile
     assert "tag_validator.api.app:create_app()" in dockerfile
 
-    dockerignore = (SERVICE_ROOT / ".dockerignore").read_text(encoding="utf-8")
-    assert "__pycache__/" in dockerignore
-    assert "dist/" in dockerignore
+    dockerignore = (SERVICE_ROOT / "Dockerfile.dockerignore").read_text(encoding="utf-8")
+    assert "!ntag_keys/src/**" in dockerignore
+    assert "!tag_validator_service/src/**" in dockerignore
 
     makefile = (SERVICE_ROOT / "Makefile").read_text(encoding="utf-8")
     assert "pkg:" in makefile
