@@ -68,7 +68,7 @@ export-tag-validator-image: ## Build, verify and export dist/tag-validator-servi
 
 PI_PATCH        ?= $(HOME)/Projects/pi-patch
 FORGEJO_PUBLISH := $(PI_PATCH)/cluster/scripts/forgejo-publish.sh
-FORGEJO_VERSION ?= $(shell git describe --tags --always --dirty)
+FORGEJO_VERSION ?= $(shell git describe --tags --always)
 
 deploy-forgejo: export-tag-validator-image dist ## Publish validator image + wheels to the pi-patch Forgejo
 	$(FORGEJO_PUBLISH) image dist/tag-validator-service-$(IMAGE_VERSION).tar tag-validator-service $(FORGEJO_VERSION)
