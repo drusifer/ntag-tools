@@ -45,9 +45,10 @@ lint: ## Ruff over every package
 check-versions: ## Fail if any package version differs from VERSION
 	@$(PYTHON) -c "import re,sys,pathlib; v=pathlib.Path('VERSION').read_text().strip(); bad=[(p,m.group(1)) for p in '$(PACKAGES)'.split() if (m:=re.search(r'^version\s*=\s*\"([^\"]+)\"', pathlib.Path(p,'pyproject.toml').read_text(), re.M)) and m.group(1)!=v]; print('versions ok: '+v) if not bad else (print('version mismatch vs '+v+': '+str(bad)), sys.exit(1))"
 
-dist: check-versions ## Build wheels and sdists for every package into dist/
+# Wheels are byte-reproducible: timestamps come from the commit, not the clock.
+dist: check-versions ## Build reproducible wheels for every package into dist/
 	@mkdir -p dist
-	@for p in $(PACKAGES); do $(PYTHON) -m build --outdir dist $$p || exit 1; done
+	@for p in $(PACKAGES); do SOURCE_DATE_EPOCH=$$(git log -1 --format=%ct) $(PYTHON) -m build --wheel --outdir dist $$p || exit 1; done
 
 clean: ## Remove build artifacts
 	rm -rf dist build
