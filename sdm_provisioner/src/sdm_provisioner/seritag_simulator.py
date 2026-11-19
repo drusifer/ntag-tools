@@ -49,6 +49,7 @@ class SeritagTagState:
     session_keys: dict | None = None
     current_key_no: int | None = None
     transaction_id: bytes | None = None
+    cmd_counter: int = 0  # secured commands handled since authentication
     rnda: bytes | None = None
     rndb: bytes | None = None
 
@@ -308,6 +309,7 @@ class SeritagSimulator:
 
         # Mark as authenticated
         self.state.authenticated = True
+        self.state.cmd_counter = 0
         self.state.current_key_no = self.state.current_key_no
 
         log.info("SeritagSim: EV2 authentication successful!")
@@ -474,9 +476,9 @@ class SeritagSimulator:
         session_enc = self.state.session_keys["sesAuthEncKey"]
         ti = self.state.transaction_id
 
-        # Calculate IV using same method as host (counter = 0 for first command)
-        # The host increments counter AFTER the command, so for ChangeKey (first cmd) it's 0
-        cmd_ctr = 0  # First authenticated command in session
+        # The host increments its command counter after every secured command, so the
+        # second key changed in one session is encrypted with counter 1, and so on.
+        cmd_ctr = self.state.cmd_counter
         iv = calculate_iv_for_command(ti, cmd_ctr, session_enc)
 
         cipher = AES.new(session_enc, AES.MODE_CBC, iv=iv)
@@ -507,6 +509,7 @@ class SeritagSimulator:
         # Update the key
         assert self.state.factory_keys is not None
         self.state.factory_keys[key_no] = new_key
+        self.state.cmd_counter += 1
         log.info(f"SeritagSim: Key {key_no} updated successfully")
 
         return [], 0x91, 0x00
