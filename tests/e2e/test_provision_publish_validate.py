@@ -127,3 +127,29 @@ def test_a_hand_written_key_file_in_that_layout_is_validated(tmp_path):
     app = create_app(store=CsvSecretStore(path), mode="validate")
     t = {"uid": uid, "counter": 1, "cmac": tag_tap_cmac(uid, 1, k3)}
     assert call(app, "POST", "/api/v1/validate", t)[1]["valid"] is True
+
+
+def test_one_shot_provision_produces_a_tag_the_validator_accepts(tmp_path):
+    path = tmp_path / "tag_keys.csv"
+    km = StoreKeyManager(CsvSecretStore(path))
+    mgr = SeritagCardManager(create_sequence_logger("e2e-oneshot"), key_store=km)
+    with mgr as card:
+        assert ProvisioningService(card, km).provision("https://flip.example/tap") is True
+    uid = mgr.simulator.state.uid.hex().upper()
+    validator = create_app(store=CsvSecretStore(path), mode="validate")
+    k3 = CsvSecretStore(path).get_key(uid).k3
+    code, body = call(validator, "POST", "/api/v1/validate",
+                      {"uid": uid, "counter": 1, "cmac": tag_tap_cmac(uid, 1, k3)})
+    assert code == 200 and body["valid"] is True
+
+
+def test_one_shot_provision_skips_the_url_phase_when_keys_fail(tmp_path):
+    km = StoreKeyManager(CsvSecretStore(tmp_path / "tag_keys.csv"))
+    mgr = SeritagCardManager(create_sequence_logger("e2e-oneshot-fail"), key_store=km)
+    with mgr as card:
+        svc = ProvisioningService(card, km)
+        calls = []
+        svc.provision_keys = lambda: False
+        svc.provision_url = lambda *a, **k: calls.append(a) or True
+        assert svc.provision("https://flip.example/tap") is False
+        assert calls == []
