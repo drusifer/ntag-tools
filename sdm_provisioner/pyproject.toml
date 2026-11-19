@@ -4,16 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sdm-provisioner"
-version = "0.3.0"
+version = "0.3.1"
 description = "NTAG424 DNA NFC Tag SDM Provisioner & TUI Tools"
 requires-python = ">=3.11"
 dependencies = [
     "pyscard>=2.0.0",
     "textual>=0.40.0",
     "pycryptodome>=3.12.0",
-    "shared==0.3.0",
-    "ntag-keys==0.3.0",
-    "tag-validator-service==0.3.0",
+    "shared==0.3.1",
+    "ntag-keys==0.3.1",
+    "tag-validator-service==0.3.1",
 ]
 
 [project.optional-dependencies]

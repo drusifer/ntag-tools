@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ntag-keys"
-version = "0.3.0"
+version = "0.3.1"
 description = "Tag key model and key stores (CSV default, memory, k3s) shared by the validator and the provisioner"
 requires-python = ">=3.11"
 dependencies = []
