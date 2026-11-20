@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import parse_qs
 
 from ..config import get_config, resolve_mode
-from ..crypto.cmac_engine import generate_sdm_key, verify_sdm_cmac
+from ..crypto.cmac_engine import verify_sdm_cmac
 from ..models import TagSecret, ValidationResult
 from ..store import TagKeyStore, create_secret_store
 from ..store.base import CounterStoreError, KeyConflictError
@@ -80,8 +80,6 @@ class TagValidatorApp:
                     return self._json_response(start_response, 405, {"error": "Method Not Allowed"})
             if path.startswith("/api/v1/keys/"):
                 subpath = path[len("/api/v1/keys/"):]
-                if subpath == "generate" and method == "POST":
-                    return self._handle_generate_key(environ, start_response)
                 if subpath == "import-csv" and method == "POST":
                     return self._handle_import_csv(environ, start_response)
                 if subpath.endswith("/undelete") and method == "POST":
@@ -201,7 +199,7 @@ class TagValidatorApp:
 
         # Compute CMAC and constant-time verify
         try:
-            is_valid, cmac_calc = verify_sdm_cmac(
+            is_valid, _expected = verify_sdm_cmac(
                 uid=uid_str,
                 counter=counter,
                 k3_hex=secret.k3,
@@ -220,7 +218,6 @@ class TagValidatorApp:
             uid=uid_str,
             counter=counter,
             cmac_received=cmac_str,
-            cmac_calculated=cmac_calc,
             error=None if is_valid else "CMAC mismatch",
         )
 
@@ -241,51 +238,6 @@ class TagValidatorApp:
                 result.reason = "replayed"
                 result.error = "Counter already used"
         return self._json_response(start_response, 200, result.to_dict())
-
-    def _handle_generate_key(self, environ: dict[str, Any], start_response: Callable) -> list[bytes]:
-        """Atomically generates fresh AES-128 keys (k0, k1, k3) and persists them to WORM vault."""
-        body = self._read_json_body(environ)
-        if not body or not body.get("uid"):
-            return self._json_response(start_response, 400, {"error": "Missing required field: uid"})
-
-        uid_raw = str(body["uid"]).strip().replace(":", "").replace("-", "").upper()
-        if len(uid_raw) != 14:
-            return self._json_response(start_response, 400, {"error": f"UID must be 14 hex characters, got '{body['uid']}'"})
-
-        # WORM check: Cannot regenerate or overwrite an existing key
-        existing = self.store.get_key(uid_raw, include_deleted=True)
-        if existing is not None:
-            return self._json_response(
-                start_response,
-                409,
-                {"error": f"Tag key already exists for UID '{uid_raw}'. Keys cannot be regenerated or overwritten."},
-            )
-
-        # Generate CSPRNG AES-128 keys for K0 (PICC Master), K1 (App Read), and K3 (SDM MAC)
-        k0 = generate_sdm_key()
-        k1 = generate_sdm_key()
-        k3 = generate_sdm_key()
-        secret = TagSecret(uid=uid_raw, k0=k0, k1=k1, k3=k3, status="active")
-
-        try:
-            success = self.store.save_key(secret)
-            if not success:
-                return self._json_response(start_response, 500, {"error": "Failed to persist secret to store"})
-        except KeyConflictError as e:
-            return self._json_response(start_response, 409, {"error": str(e)})
-
-        return self._json_response(
-            start_response,
-            201,
-            {
-                "status": "created",
-                "uid": uid_raw,
-                "k0": k0,
-                "k1": k1,
-                "k3": k3,
-                "message": "Keys created and persisted to WORM vault. Burn these keys to chip Keys 0, 1, and 3.",
-            },
-        )
 
     def _handle_save_key(self, environ: dict[str, Any], start_response: Callable) -> list[bytes]:
         body = self._read_json_body(environ)
@@ -316,16 +268,14 @@ class TagValidatorApp:
         return self._json_response(
             start_response,
             201,
-            {"status": "created", "secret": secret.to_dict(include_secret=False)},
+            {"status": "created", "secret": secret.to_dict()},
         )
 
     def _handle_get_key(self, uid: str, environ: dict[str, Any], start_response: Callable) -> list[bytes]:
         secret = self.store.get_key(uid)
         if not secret:
             return self._json_response(start_response, 404, {"error": f"Tag key not found for UID '{uid}'"})
-        qs = parse_qs(environ.get("QUERY_STRING", ""))
-        include_secret = qs.get("raw", ["false"])[0].lower() in ("true", "1")
-        return self._json_response(start_response, 200, secret.to_dict(include_secret=include_secret))
+        return self._json_response(start_response, 200, secret.to_dict())
 
     def _handle_delete_key(self, uid: str, start_response: Callable) -> list[bytes]:
         deleted = self.store.delete_key(uid)
@@ -342,8 +292,7 @@ class TagValidatorApp:
     def _handle_list_keys(self, environ: dict[str, Any], start_response: Callable) -> list[bytes]:
         qs = parse_qs(environ.get("QUERY_STRING", ""))
         include_deleted = qs.get("include_deleted", ["false"])[0].lower() in ("true", "1")
-        raw = qs.get("raw", ["false"])[0].lower() in ("true", "1")
-        details = qs.get("details", ["false"])[0].lower() in ("true", "1") or raw
+        details = qs.get("details", ["false"])[0].lower() in ("true", "1")
         uids = self.store.list_uids(include_deleted=include_deleted)
 
         res: dict[str, Any] = {"count": len(uids), "uids": uids}
@@ -352,7 +301,7 @@ class TagValidatorApp:
             for u in uids:
                 s = self.store.get_key(u, include_deleted=include_deleted)
                 if s:
-                    keys_list.append(s.to_dict(include_secret=raw))
+                    keys_list.append(s.to_dict())
             res["keys"] = keys_list
 
         return self._json_response(start_response, 200, res)

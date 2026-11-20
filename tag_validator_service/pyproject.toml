@@ -4,19 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tag-validator-service"
-version = "0.3.1"
+version = "0.4.0"
 description = "Standalone microservice for managing NTAG 424 DNA tag keys as k3s secrets and performing stateless SDM CMAC validation"
 readme = "README.md"
 authors = [{ name = "GlobalHeadsOrTails Team" }]
 requires-python = ">=3.11"
 dependencies = [
     "cryptography>=41.0.0",
-    "ntag-keys==0.3.1",
+    "ntag-keys==0.4.0",
 ]
 
 [project.optional-dependencies]
 k3s = [
-    "ntag-keys[k3s]==0.3.1",
+    "ntag-keys[k3s]==0.4.0",
 ]
 server = [
     "gunicorn>=21.0.0",

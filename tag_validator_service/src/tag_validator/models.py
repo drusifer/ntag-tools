@@ -18,7 +18,6 @@ class ValidationResult:
     uid: str
     counter: int
     cmac_received: str
-    cmac_calculated: str | None = None
     error: str | None = None
     reason: str | None = None  # "replayed" when a consuming request reused a counter
     consumed: bool | None = None  # set only on consuming requests: was the counter recorded now?
@@ -34,8 +33,7 @@ class ValidationResult:
             res["reason"] = self.reason
         if self.consumed is not None:
             res["consumed"] = self.consumed
-        if self.cmac_calculated:
-            res["cmac_calculated"] = self.cmac_calculated
+        # Never the CMAC the tap should have carried: that would let anyone who reaches the port forge a tap (SEC-003).
         if self.error:
             res["error"] = self.error
         return res

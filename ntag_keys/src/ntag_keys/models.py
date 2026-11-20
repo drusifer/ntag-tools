@@ -3,9 +3,19 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+
+
+def key_fingerprint(key_hex: str) -> str:
+    """First 8 hex characters of SHA-256 of the key bytes. One-way, so it is safe to show and log."""
+    try:
+        material = bytes.fromhex(key_hex)
+    except ValueError:
+        material = key_hex.encode("utf-8")
+    return hashlib.sha256(material).hexdigest()[:8].upper()
 
 
 @dataclass
@@ -45,23 +55,17 @@ class TagSecret:
         """RFC 1123 compliant secret name for Kubernetes/k3s."""
         return f"tag-key-{self.uid.lower()}"
 
-    def masked_k3(self) -> str:
-        """Masked representation of K3 for safe display/logging."""
-        if len(self.k3) == 32:
-            return f"{self.k3[:4]}...{self.k3[-4:]}"
-        return "..."
+    def fingerprint_k3(self) -> str:
+        """One-way tag for K3: tells keys apart, shows no key characters."""
+        return key_fingerprint(self.k3)
 
-    def masked_k0(self) -> str:
-        """Masked representation of K0 for safe display/logging."""
-        if len(self.k0) == 32:
-            return f"{self.k0[:4]}...{self.k0[-4:]}"
-        return "..."
+    def fingerprint_k0(self) -> str:
+        """One-way tag for K0: tells keys apart, shows no key characters."""
+        return key_fingerprint(self.k0)
 
-    def masked_k1(self) -> str:
-        """Masked representation of K1 for safe display/logging."""
-        if len(self.k1) == 32:
-            return f"{self.k1[:4]}...{self.k1[-4:]}"
-        return "..."
+    def fingerprint_k1(self) -> str:
+        """One-way tag for K1: tells keys apart, shows no key characters."""
+        return key_fingerprint(self.k1)
 
     def to_k8s_secret_data(self) -> dict[str, str]:
         """Encodes values for Kubernetes Secret .data dictionary (base64 string values)."""
@@ -111,21 +115,17 @@ class TagSecret:
             deleted_at=deleted_at,
         )
 
-    def to_dict(self, include_secret: bool = False) -> dict[str, Any]:
-        """Dictionary representation for JSON serialization."""
+    def to_dict(self) -> dict[str, Any]:
+        """Metadata for JSON serialization. Never holds a key value; there is no switch for that."""
         data: dict[str, Any] = {
             "uid": self.uid,
             "secret_name": self.secret_name,
             "status": self.status,
             "created_at": self.created_at,
-            "k0_masked": self.masked_k0(),
-            "k1_masked": self.masked_k1(),
-            "k3_masked": self.masked_k3(),
+            "k0_fingerprint": self.fingerprint_k0(),
+            "k1_fingerprint": self.fingerprint_k1(),
+            "k3_fingerprint": self.fingerprint_k3(),
         }
         if self.deleted_at:
             data["deleted_at"] = self.deleted_at
-        if include_secret:
-            data["k0"] = self.k0
-            data["k1"] = self.k1
-            data["k3"] = self.k3
         return data

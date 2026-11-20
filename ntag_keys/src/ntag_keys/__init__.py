@@ -10,7 +10,7 @@ from .factory import BACKENDS, create_secret_store
 from .memory_store import MemorySecretStore
 from .models import TagSecret
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 
 def __getattr__(name: str):

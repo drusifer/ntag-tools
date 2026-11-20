@@ -2,7 +2,7 @@
 
 **Repository**: ntag-tools (`git@github.com:drusifer/ntag-tools.git`)
 **Owner**: Tank
-**Last Verified**: 2026-11-17 (Sprint 1, Phase 0)
+**Last Verified**: 2026-11-20 (Sprint 2 close: `make test-all`, `make lint`, `make check-versions`, `make dist` pass at 0.4.0)
 
 ## 1. Topology
 - `shared/` — `UID`, `TagKeys`, `mask_key` (no dependencies).
@@ -22,6 +22,7 @@ Python 3.11+, workspace `.venv` (`make venv`). `pyscard` needs system PC/SC head
 - Sprint close: Tank `*devops sdlc-check`, Oracle groom, Smith acceptance.
 
 ## 4. Key custody rules
-- Key material never leaves the key store over HTTP in `TAG_VALIDATOR_MODE=validate`.
+- Key material never leaves the key store over HTTP, in any mode (Sprint 2, ADR 16). The validator has no route that returns a key and `TagSecret.to_dict` cannot include one; keys are shown only as one-way fingerprints. `tests/test_no_key_egress.py` sweeps every route in both modes and must stay green. New routes or response fields need an entry in that sweep.
+- `TAG_VALIDATOR_MODE=validate` additionally removes the routes that write keys in.
 - The provisioner writes keys with the same store code the validator reads with.
 - k3s Secrets: `tag-key-<uid>` (keys) and `tag-ctr-<uid>` (counters); validator credential may be read-only.

@@ -1,5 +1,7 @@
 """Unit tests for secret store adapters and TagSecret model with WORM semantics."""
 
+import hashlib
+
 import pytest
 
 from tag_validator.models import TagSecret
@@ -17,7 +19,7 @@ def test_tag_secret_model():
     assert sec.k3 == TEST_K3
     assert sec.status == "active"
     assert sec.secret_name == f"tag-key-{TEST_UID.lower()}"
-    assert sec.masked_k3() == "825F...70AF"
+    assert sec.fingerprint_k3() == hashlib.sha256(bytes.fromhex(TEST_K3)).hexdigest()[:8].upper()
 
     # Test K8s base64 encoding and decoding round-trip
     k8s_data = sec.to_k8s_secret_data()

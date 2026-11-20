@@ -117,7 +117,7 @@ def test_validate_post_success(test_client: WsgiTestClient):
     )
     assert status == 200
     assert body["valid"] is True
-    assert body["cmac_calculated"] == expected_cmac
+    assert "cmac_calculated" not in body  # SEC-003: the expected CMAC is never returned
     assert body["cmac_received"] == expected_cmac
 
 
@@ -175,28 +175,17 @@ def test_validate_get_success(test_client: WsgiTestClient):
     status, body = test_client.get("/api/v1/validate", query_string=query)
     assert status == 200
     assert body["valid"] is True
-    assert body["cmac_calculated"] == expected_cmac
+    assert "cmac_calculated" not in body
 
 
-def test_atomic_key_generation_and_worm(test_client: WsgiTestClient):
+def test_saved_key_is_worm_and_validates(test_client: WsgiTestClient):
     gen_uid = "04998877665544"
+    saved_k3 = "5A5A5A5A5A5A5A5A6B6B6B6B6B6B6B6B"
 
-    # Generate key atomically via CSPRNG
-    status, body = test_client.post("/api/v1/keys/generate", {"uid": gen_uid})
+    status, body = test_client.post("/api/v1/keys", {"uid": gen_uid, "k3": saved_k3})
     assert status == 201
-    assert body["status"] == "created"
-    assert body["uid"] == gen_uid
-    assert len(body["k0"]) == 32
-    assert len(body["k1"]) == 32
-    assert len(body["k3"]) == 32
-    generated_k3 = body["k3"]
 
-    # WORM check 1: cannot regenerate existing key
-    status, body = test_client.post("/api/v1/keys/generate", {"uid": gen_uid})
-    assert status == 409
-    assert "already exists" in body["error"]
-
-    # WORM check 2: cannot overwrite with a different key
+    # WORM: cannot overwrite with a different key
     status, body = test_client.post(
         "/api/v1/keys",
         {"uid": gen_uid, "k3": "00001111222233334444555566667777"},
@@ -204,8 +193,8 @@ def test_atomic_key_generation_and_worm(test_client: WsgiTestClient):
     assert status == 409
     assert "immutable" in body["error"]
 
-    # Validate using the freshly generated key works
-    expected_cmac = calculate_sdm_cmac(gen_uid, 1, generated_k3)
+    # Validate using the saved key works
+    expected_cmac = calculate_sdm_cmac(gen_uid, 1, saved_k3)
     status, body = test_client.post(
         "/api/v1/validate",
         {"uid": gen_uid, "counter": 1, "cmac": expected_cmac},
@@ -214,30 +203,22 @@ def test_atomic_key_generation_and_worm(test_client: WsgiTestClient):
     assert body["valid"] is True
 
 
-def test_get_key_raw_and_masked(test_client: WsgiTestClient):
+def test_get_key_shows_fingerprints_only(test_client: WsgiTestClient):
+    """Sprint 2: no key leaves, with or without ?raw=true (the full sweep is in test_no_key_egress.py)."""
     gen_uid = "04887766554433"
-    status, body = test_client.post("/api/v1/keys/generate", {"uid": gen_uid})
+    k0, k1, k3 = "0A" * 16, "1B" * 16, "2C" * 16
+    status, _ = test_client.post("/api/v1/keys", {"uid": gen_uid, "k0": k0, "k1": k1, "k3": k3})
     assert status == 201
-    k0 = body["k0"]
-    k1 = body["k1"]
-    k3 = body["k3"]
 
-    # Masked GET (default)
-    status, masked_body = test_client.get(f"/api/v1/keys/{gen_uid}")
+    status, body = test_client.get(f"/api/v1/keys/{gen_uid}")
     assert status == 200
-    assert "k0" not in masked_body
-    assert "k1" not in masked_body
-    assert "k3" not in masked_body
-    assert masked_body["k0_masked"] == f"{k0[:4]}...{k0[-4:]}"
-    assert masked_body["k1_masked"] == f"{k1[:4]}...{k1[-4:]}"
-    assert masked_body["k3_masked"] == f"{k3[:4]}...{k3[-4:]}"
+    for field in ("k0", "k1", "k3"):
+        assert field not in body
+    assert len(body["k0_fingerprint"]) == 8 and len(body["k3_fingerprint"]) == 8
+    assert body["k0_fingerprint"] != body["k1_fingerprint"]
 
-    # Raw GET (?raw=true)
-    status, raw_body = test_client.get(f"/api/v1/keys/{gen_uid}", query_string="raw=true")
-    assert status == 200
-    assert raw_body["k0"] == k0
-    assert raw_body["k1"] == k1
-    assert raw_body["k3"] == k3
+    status, with_raw = test_client.get(f"/api/v1/keys/{gen_uid}", query_string="raw=true")
+    assert status == 200 and with_raw == body
 
 
 def test_key_management_soft_delete_and_undelete(test_client: WsgiTestClient):
@@ -253,7 +234,8 @@ def test_key_management_soft_delete_and_undelete(test_client: WsgiTestClient):
     assert body["status"] == "created"
     assert body["secret"]["uid"] == new_uid
     assert "k3" not in body["secret"]  # Secret unexposed in metadata
-    assert body["secret"]["k3_masked"] == "A1A2...B7B8"
+    assert len(body["secret"]["k3_fingerprint"]) == 8
+    assert "A1A2" not in str(body["secret"]) and "B7B8" not in str(body["secret"])
     assert "coin_name" not in body["secret"]  # Decoupled domain
 
     # Get key metadata

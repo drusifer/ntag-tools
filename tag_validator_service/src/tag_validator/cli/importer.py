@@ -61,7 +61,7 @@ def import_csv_to_store(
 
                 secret = TagSecret(uid=uid, k3=k3)
                 if dry_run:
-                    log.info(f"[DRY-RUN] Would save {secret.secret_name} (UID={secret.uid}, K3={secret.masked_k3()})")
+                    log.info(f"[DRY-RUN] Would save {secret.secret_name} (UID={secret.uid}, K3 fingerprint={secret.fingerprint_k3()})")
                     imported += 1
                 else:
                     assert store is not None

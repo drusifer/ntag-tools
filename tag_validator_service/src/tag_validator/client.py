@@ -95,19 +95,10 @@ class TagValidatorClient:
             "error": body.get("error", f"Validation request failed (HTTP {status_code})"),
         }
 
-    def generate_key(self, uid: str) -> dict[str, Any]:
-        """Atomically generate fresh CSPRNG AES-128 keys (k0, k1, k3) and commit to WORM vault."""
+    def get_key(self, uid: str) -> dict[str, Any] | None:
+        """Retrieve a key's status and metadata (fingerprints, never key values)."""
         clean_uid = uid.strip().replace(":", "").replace("-", "").upper()
-        status_code, body = self._http_request("POST", "/api/v1/keys/generate", {"uid": clean_uid})
-        if status_code == 201:
-            return body
-        raise RuntimeError(f"Failed to generate key (HTTP {status_code}): {body.get('error', 'Unknown error')}")
-
-    def get_key(self, uid: str, raw: bool = False) -> dict[str, Any] | None:
-        """Retrieve key status and metadata from service. If raw=True, returns raw k0, k1, k3."""
-        clean_uid = uid.strip().replace(":", "").replace("-", "").upper()
-        qs = "?raw=true" if raw else ""
-        status_code, body = self._http_request("GET", f"/api/v1/keys/{clean_uid}{qs}")
+        status_code, body = self._http_request("GET", f"/api/v1/keys/{clean_uid}")
         if status_code == 200:
             return body
         if status_code == 404:
@@ -146,21 +137,21 @@ class TagValidatorClient:
         status_code, _ = self._http_request("POST", f"/api/v1/keys/{clean_uid}/undelete", {})
         return status_code == 200
 
-    def list_keys(self, include_deleted: bool = False, raw: bool = False) -> list[Any]:
+    def list_keys(self, include_deleted: bool = False, details: bool = False) -> list[Any]:
         """List tag keys known to the service.
 
-        If raw=True, returns list of dicts with full raw key data.
+        If details=True, returns a list of metadata dicts (status, timestamps, fingerprints; no key values).
         Otherwise, returns list of UID strings.
         """
         qs_parts = []
         if include_deleted:
             qs_parts.append("include_deleted=true")
-        if raw:
-            qs_parts.append("raw=true")
+        if details:
+            qs_parts.append("details=true")
         qs = f"?{'&'.join(qs_parts)}" if qs_parts else ""
         status_code, body = self._http_request("GET", f"/api/v1/keys{qs}")
         if status_code == 200:
-            if raw:
+            if details:
                 return body.get("keys", [])
             return body.get("uids", [])
         return []

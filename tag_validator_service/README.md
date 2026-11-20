@@ -35,10 +35,11 @@ Response (200 OK):
   "valid": true,
   "uid": "043F13E2151990",
   "counter": 5,
-  "cmac_received": "8841D6A4D9B0A352",
-  "cmac_calculated": "8841D6A4D9B0A352"
+  "cmac_received": "8841D6A4D9B0A352"
 }
 ```
+
+The response never includes the CMAC the tap should have carried: on a refused tap that would hand a valid CMAC to anyone who can reach the port.
 
 Response (404 Not Found):
 ```json
@@ -68,19 +69,8 @@ Counter store failure (503): `{"valid": false, "error": "Counter store unavailab
 A caller must treat a `valid: true` without `"consumed": true` as not consumed (an older validator ignores the flag). Counters are kept in a separate Secret per tag (`tag-counter` component, `tag-ctr-<uid>`), never in the key Secret, and updated with Kubernetes compare-and-set, so any number of replicas agree. The in-memory backend keeps them in process memory (lost on restart; for tests only).
 
 ### 3. Key Management & Internal WORM Engine
-- `POST /api/v1/keys/generate`: Atomically generates a fresh CSPRNG AES-128 key and commits it directly to the WORM vault. Plaintext key is disclosed exactly once for burning to physical chip Key 3.
-  ```json
-  // Request
-  { "uid": "043F13E2151990" }
+**No route returns a key, in any mode.** Responses carry only a one-way fingerprint per key (`k0_fingerprint`, `k1_fingerprint`, `k3_fingerprint`: the first 8 hex characters of SHA-256 of the key bytes), enough to tell keys apart. The provisioner generates keys and writes them into the key store itself; there is no `generate` route and no `?raw=true` (a `raw` query is ignored). `TAG_VALIDATOR_MODE=validate` additionally removes the routes that write keys in.
 
-  // Response (201 Created)
-  {
-    "status": "created",
-    "uid": "043F13E2151990",
-    "k3": "99E88808ADC7885BC7065D739A25E1D0",
-    "message": "Key created and persisted to WORM vault. Burn this key to chip Key 3."
-  }
-  ```
 - `POST /api/v1/keys`: Save a pre-existing tag key secret. Enforces WORM: attempting to overwrite a UID with a different key is rejected with `409 Conflict`.
   ```json
   {
@@ -89,7 +79,7 @@ A caller must treat a `valid: true` without `"consumed": true` as not consumed (
   }
   ```
 - `GET /api/v1/keys`: List all managed tag UIDs (active only by default; pass `?include_deleted=true` for all).
-- `GET /api/v1/keys/<uid>`: Retrieve tag metadata (masked key `99E8...E1D0`).
+- `GET /api/v1/keys/<uid>`: Retrieve tag metadata (status, timestamps, key fingerprints; never key values). `GET /api/v1/keys?details=true` lists the same metadata for every tag.
 - `DELETE /api/v1/keys/<uid>`: Soft-delete (tombstoning). Retains secret in vault for auditability, but disables validation.
 - `POST /api/v1/keys/<uid>/undelete`: Restores a soft-deleted key back to `active` status.
 - `POST /api/v1/keys/import-csv`: Bulk import tag keys from CSV payload (ingests `UID` and `SDM_MAC_KEY`).
